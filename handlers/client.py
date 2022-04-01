@@ -38,7 +38,6 @@ async def registration_goodbye(message: types.Message):
 
 # ===================================== [ Машина СОСТОЯНИЙ ]
 class FSMAdmin(StatesGroup):
-    user_id = State()
     photo = State()
     name = State()
     age = State()
@@ -46,15 +45,7 @@ class FSMAdmin(StatesGroup):
     phone = State()
 
 
-# Начало диалога загрузки нового пункта меню
-
-async def cm_start(message: types.Message):
-    await FSMAdmin.photo.set()
-    await message.reply('Загрузите Ваше фото')
-
-
-# Выход из состояний
-
+# Выход из меню регистрации
 # @dp.message_handler(state='*', commands='Отмена')
 # @dp.message_handler(Text(equals='отмена', ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
@@ -65,6 +56,24 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     await message.reply('До встречи!')
 
 
+# Начало диалога загрузки нового пункта меню
+
+async def cm_start(message: types.Message):
+    await FSMAdmin.photo.set()
+    await message.reply('Загрузите Ваше фото')
+
+
+async def show_registration_data(message, state):
+    async with state.proxy() as data:
+        await message.answer(
+            f'Ваш ID: {data.get("user_id", "_____")}\n'
+            f'Ваше имя: {data.get("name", "_____")}\n'
+            f'Ваш возраст: {data.get("age", "_____")}\n'
+            f'Ваши навыки: {data.get("skills", "_____")}\n'
+            f'Ваши номер телефона: {data.get("phone", "_____")}\n'
+        )
+
+
 # Ловим первый ответ и пишем в словарь
 
 # @dp.message_handler(content_types=['photo'], state=FSMAdmin.photo)
@@ -73,6 +82,7 @@ async def load_photo(message: types.Message, state: FSMContext):
     async with state.proxy() as data:   # --> значение из контекста (м.б. и есть контекст)
         data['user_id'] = message.from_user.id
         data['photo'] = message.photo[0].file_id
+    await show_registration_data(message=message, state=state)
     await FSMAdmin.next()
     await message.reply(f"Теперь введите ФИО. Пример ввода: 'Николаев Николай Николаевич',\n\n"
                         f"Если хотите воспользоваться функцией автозаполнение, то мы возьмём имя Вашего профиля в телеграмм   ***   {full_name(message)}   ***   нажмите команду /name_accept \n"
@@ -102,12 +112,15 @@ async def load_name(message: types.Message, state: FSMContext):
     if name.replace(' ', '').isalpha():
         async with state.proxy() as data:
             data['name'] = name
+        await show_registration_data(message=message, state=state)
+
         await FSMAdmin.next()
         await message.reply('Ваш возраст')
 
     elif [s for s in name if s in '1234567890']:
         async with state.proxy() as data:
             data['name'] = name
+        await show_registration_data(message=message, state=state)
         await message.reply('Уверены ли Вы, что Ваше имя должно содержать цифры? Если да нажмите на команду /yes')
 
     else:
@@ -127,6 +140,7 @@ async def load_age(message: types.Message, state: FSMContext):
     if message.text.isnumeric() and 10 < int(message.text) < 100:
         async with state.proxy() as data:
             data['age'] = message.text
+        await show_registration_data(message=message, state=state)
         await FSMAdmin.next()
         await message.reply('Какими навыками в программировании Вы обладаете?')
     else:
@@ -140,6 +154,7 @@ async def load_age(message: types.Message, state: FSMContext):
 async def load_skills(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['skills'] = message.text
+        await show_registration_data(message=message, state=state)
     await FSMAdmin.next()
     await message.reply('Ваш номер телефона в формате (9211802465)')
 
@@ -150,6 +165,7 @@ async def load_phone(message: types.Message, state: FSMContext):
     if message.text.isnumeric() and len(message.text) == 10:
         async with state.proxy() as data:
             data['phone'] = int(message.text)
+        await show_registration_data(message=message, state=state)
 
         await sqlite_db.sql_add_command(state)
         await state.finish()
