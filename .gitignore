@@ -4,5 +4,5 @@ config_tg/config.py
 # это системная папка для IDE
 .idea/
 
-# мы не хотим загружать на сервер Логи
 log.txt
+registration_user.db
