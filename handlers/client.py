@@ -34,7 +34,7 @@ async def registration_action(message: types.Message):
 # @dp.message_handler()
 async def registration_goodbye(message: types.Message):
     await message.answer("Регистрация завершена!")
-
+#1231231232
 
 # ===================================== [ Машина СОСТОЯНИЙ ]
 class FSMAdmin(StatesGroup):
