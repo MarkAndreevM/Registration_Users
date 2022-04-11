@@ -1,4 +1,4 @@
-from aiogram import types, Dispatcher
+import keyboards.client_kb
 from create_bot import dp, bot
 
 from keyboards import kb_client
@@ -7,10 +7,12 @@ from aiogram.types import ReplyKeyboardRemove
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram import types, Dispatcher
-from create_bot import dp
 from aiogram.dispatcher.filters import Text
 from data_base import sqlite_db
 from keyboards import client_kb
+
+
+# *************************************** [НАЧАЛО] ***************************************************
 
 
 # @dp.message_handler(commands=["start", "registration"])
@@ -29,14 +31,16 @@ async def registration_action(message: types.Message):
     await cm_start(message)
 
 
-# Завершение регистрации
+# ======================== ВЫЗОВ КАЛЬКУЛЯТОРА (ОСНОВНОЙ КОД ПРОПИСАН В КОНЦЕ)
 
-# @dp.message_handler()
-async def registration_goodbye(message: types.Message):
-    await message.answer("Регистрация завершена!")
+# @dp.message_handler(commands=["Калькулятор"])
+# async def calculater(message: types.Message):
+#     await message.answer("Отлично! Теперь тебе доступен наш калькулятор \n"
+#                          "Давай, что-нибудь посчитаем! \n"
+#                          "0", reply_markup=keyboards.client_kb.kb_calculater)
 
 
-# ===================================== [ Машина СОСТОЯНИЙ ]
+# =========================================== [ МАШИНА СОСТОЯНИЙ (РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ) ]
 class FSMAdmin(StatesGroup):
     user_id = State()
     photo = State()
@@ -55,7 +59,7 @@ async def cm_start(message: types.Message):
 
 # Выход из состояний
 
-# @dp.message_handler(state='*', commands='Отмена')
+# @dp.message_handler(state='*', commands='cancel')
 # @dp.message_handler(Text(equals='отмена', ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
@@ -66,11 +70,10 @@ async def cancel_handler(message: types.Message, state: FSMContext):
 
 
 # Ловим первый ответ и пишем в словарь
-
 # @dp.message_handler(content_types=['photo'], state=FSMAdmin.photo)
 async def load_photo(message: types.Message, state: FSMContext):
     # data = state.proxy()
-    async with state.proxy() as data:   # --> значение из контекста (м.б. и есть контекст)
+    async with state.proxy() as data:  # --> значение из контекста (м.б. и есть контекст)
         data['user_id'] = message.from_user.id
         data['photo'] = message.photo[0].file_id
     await FSMAdmin.next()
@@ -90,7 +93,6 @@ def full_name(message: types.Message):
 
 
 # Ловим второй ответ
-
 # @dp.message_handler(state=FSMAdmin.name)
 async def load_name(message: types.Message, state: FSMContext):
     if message.text == "/name_accept":
@@ -121,7 +123,6 @@ async def check_load_name(message: types.Message, state: FSMContext):
 
 
 # Ловим третий ответ
-
 # @dp.message_handler(state=FSMAdmin.age)
 async def load_age(message: types.Message, state: FSMContext):
     if message.text.isnumeric() and 10 < int(message.text) < 100:
@@ -135,13 +136,14 @@ async def load_age(message: types.Message, state: FSMContext):
 
 
 # Ловим четвёртый ответ
-
 # @dp.message_handler(state=FSMAdmin.skills
 async def load_skills(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['skills'] = message.text
     await FSMAdmin.next()
     await message.reply('Ваш номер телефона в формате (9211802465)')
+    # Другой способ ответить пользователю (то как выглядит метод ***reply*** внутри)
+    # await message.bot.send_message(chat_id=message.chat.id, text='Ваш номер телефона в формате (9211802465)')
 
 
 # Ловим пятый ответ
@@ -160,11 +162,18 @@ async def load_phone(message: types.Message, state: FSMContext):
             "Номер должен состоять из 10 цифр, без пробелов и без первых символов (+7) и 8, в формате (9211802465)")
 
 
+#                     ФУНКЦИЯ ПРОВЕРКА (ЕСЛИ ПОЛЬЗОВАТЕЛЬ ВВЁЛ ПРОИЗВОЛЬНОЕ СООБЩЕНИЕ)
 async def echo(message: types.Message):
     await message.answer('Не понял Вашей команды. Проверьте правильность ввода')
 
-    # Регистрием хэндлеры
 
+# Завершение регистрации
+# @dp.message_handler()
+async def registration_goodbye(message: types.Message):
+    await message.answer("Регистрация завершена!")
+
+
+# ===========================================РЕГИСТРИРУЕМ ХЭНДЛЕРЫ
 
 def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(start_command, commands=["start", "registration"])
@@ -174,7 +183,7 @@ def register_handlers_client(dp: Dispatcher):
 
     # Машина состояний
 
-    dp.register_message_handler(cancel_handler, state='*', commands='Отмена')
+    dp.register_message_handler(cancel_handler, state='*', commands=['cancel'])
     dp.register_message_handler(cancel_handler, Text(equals='отмена', ignore_case=True), state='*')
     dp.register_message_handler(load_photo, content_types=['photo'], state=FSMAdmin.photo)
     dp.register_message_handler(check_load_name, commands=["yes"], state=FSMAdmin.name)
@@ -183,6 +192,35 @@ def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(load_skills, state=FSMAdmin.skills)
     dp.register_message_handler(load_phone, state=FSMAdmin.phone)
 
-# @dp.message_handler(commands=["regist"], state=None)
-# async def registration_action(message: types.Message):
-#     await message.answer("Вы начали регистрацию.\n\n" "1. Введите ваше ФИО")
+    # КАЛЬКУЛЯТОР ПОСЛЕ РЕГИСТРАЦИИ
+
+
+value = ''
+old_value = ''
+
+
+@dp.message_handler(commands=["Калькулятор"])
+async def calculater(message: types.Message):
+    await message.answer("Отлично! Теперь тебе доступен наш калькулятор \n"
+                         "Давай, что-нибудь посчитаем! \n"
+                         "0", reply_markup=keyboards.client_kb.kb_calculater)
+
+
+@dp.callback_query_handler()
+async def callback_func(query):
+    button = query.data
+    value = query.message.text.split('\n')[-1]
+
+    if button == 'exit':
+        await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+        return
+
+    if button == 'C':
+        value = '0'
+    elif button == '=':
+        value = str(eval(value))
+    else:
+        value = button if value == '0' and button.isnumeric() else value + button
+
+    await bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, text=value,
+                                reply_markup=keyboards.client_kb.kb_calculater)
