@@ -1,6 +1,35 @@
 import sqlite3 as sq
 
-from create_bot import bot
+
+# ================= ФУНКЦИЯ КОТОРАЯ БЕРЕТ ИЗ БАЗЫ ДАННЫХ ВСЕ ЗАРЕГИСТРИРОВАННЫЕ USER_ID =============================
+def sql_is_user_id_in_user_ids(user_id):
+    global base, cur
+    base = sq.connect('registration_user.db')
+
+    if base:
+        print('Data base connected OK!')
+    else:
+        raise Exception('Ошибка подключения к базе данных')
+
+    cur = base.cursor()
+    return cur.execute(f'SELECT user_id FROM show_data WHERE user_id = {user_id}').fetchone()  # --> извлекает одну строку из БД из user_id (id пользователя)
+
+
+# def sql_get_user_ids():
+#     global base, cur
+#     base = sq.connect('registration_user.db')
+#
+#     if base:
+#         print('Data base connected OK!')
+#     else:
+#         raise Exception('Ошибка подключения к базе данных')
+#
+#     cur = base.cursor()
+#     return cur.execute('SELECT user_id FROM show_data').fetchall()  # --> извлекает все строки из БД из user_id
+
+
+# =========================================== СОЗДАЕМ БАЗУ ДАННЫХ =============================================
+
 
 def sql_start():
     global base, cur
@@ -12,8 +41,10 @@ def sql_start():
         raise Exception('Ошибка подключения к базе данных')
 
     cur = base.cursor()
-    base.execute('CREATE TABLE IF NOT EXISTS show_data(user_id TEXT, img TEXT, name TEXT, age TEXT, skills TEXT, phone INT(10))')
+    base.execute(
+        'CREATE TABLE IF NOT EXISTS show_data(user_id INT, img VARCHAR, name VARCHAR(64), age INT, skills TEXT, phone INT)')
     base.commit()
+
 
 async def sql_add_command(state):
     async with state.proxy() as data:
@@ -26,7 +57,3 @@ async def sql_add_command(state):
                        f"Возраст - {data.get('age')}\n"
                        f"Навыки - {data.get('skills')}\n"
                        f"Номер телефона - {data.get('phone')}\n")
-
-
-
-

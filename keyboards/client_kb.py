@@ -7,8 +7,11 @@ b3 = KeyboardButton("/Калькулятор")
 
 kb_client = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 
-kb_client.add(b1).insert(b3).add(b2)
+kb_client.add(b1).add(b2)
 
+calculator = False
+if calculator:
+    kb_client.add(b3)
 # КНОПКИ ДЛЯ КАЛЬКУЛЯТОРА
 
 kb_calculater = InlineKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)

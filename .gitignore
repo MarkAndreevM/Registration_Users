@@ -1,5 +1,7 @@
 # Хранит приватные данные (ключи, ID и тп)
 config_tg/config.py
+user_photos
+photo
 
 # это системная папка для IDE
 .idea/
